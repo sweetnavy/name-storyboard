@@ -1,11 +1,12 @@
-const spreads = [
-  { label: '1', pages: ['1', ''], tone: 'cover' },
-  { label: '2-3', pages: ['3', '2'] },
-  { label: '4-5', pages: ['5', '4'] },
-  { label: '6-7', pages: ['7', '6'] },
-]
+import type { Spread } from '../../types/storyboard'
 
-export function SpreadNavigator() {
+type SpreadNavigatorProps = {
+  spreads: Spread[]
+  currentSpreadId: string
+  onGoToSpread: (pageNumber: number) => void
+}
+
+export function SpreadNavigator({ currentSpreadId, onGoToSpread, spreads }: SpreadNavigatorProps) {
   return (
     <section className="navigator-block">
       <div className="section-heading">
@@ -14,9 +15,14 @@ export function SpreadNavigator() {
       </div>
       <div className="spread-list">
         {spreads.map((spread) => (
-          <article className="spread-thumb" key={spread.label}>
+          <button
+            className={`spread-thumb ${spread.id === currentSpreadId ? 'is-active' : ''}`}
+            key={spread.id}
+            onClick={() => onGoToSpread(spread.pageNumbers[0])}
+            type="button"
+          >
             <div className="thumb-pages" aria-hidden="true">
-              {spread.pages.map((page) => (
+              {formatThumbnailPages(spread).map((page) => (
                 <span className={page === '' ? 'is-empty-page' : undefined} key={page || 'empty'}>
                   {page}
                 </span>
@@ -24,11 +30,19 @@ export function SpreadNavigator() {
             </div>
             <strong>
               {spread.label}
-              {spread.tone === 'cover' && <span className="thumb-note">扉</span>}
+              {spread.pageNumbers[0] === 1 && <span className="thumb-note">扉</span>}
             </strong>
-          </article>
+          </button>
         ))}
       </div>
     </section>
   )
+}
+
+function formatThumbnailPages(spread: Spread) {
+  if (spread.pageNumbers.length === 1) {
+    return [String(spread.pageNumbers[0]), '']
+  }
+
+  return [...spread.pageNumbers].reverse().map(String)
 }

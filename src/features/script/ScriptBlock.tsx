@@ -1,43 +1,51 @@
 import { ScriptBeatItem } from './ScriptBeatItem'
+import type { Character, Project } from '../../types/storyboard'
+import { getCurrentSpread } from '../../utils/pageOperations'
 
-const beats = [
-  {
-    panelNo: '001',
-    character: '澪',
-    body: '雨の上がった校門前。澪が空を見上げ、少しだけ笑う。',
-  },
-  {
-    panelNo: '002',
-    character: '奏',
-    body: '奏が傘を閉じながら近づく。二人の距離はまだ少し遠い。',
-  },
-  {
-    panelNo: '003',
-    character: '澪',
-    body: '扉ページの余白にタイトルを置く想定。背景は薄い校舎シルエット。',
-  },
-]
+type ScriptBlockProps = {
+  project: Project
+  characters: Character[]
+  onAddBeat: () => void
+  onUpdateBeatText: (beatId: string, text: string) => void
+  onDeleteBeat: (beatId: string) => void
+}
 
-export function ScriptBlock() {
+export function ScriptBlock({
+  characters,
+  onAddBeat,
+  onDeleteBeat,
+  onUpdateBeatText,
+  project,
+}: ScriptBlockProps) {
+  const currentSpread = getCurrentSpread(project)
+  const visiblePageNumbers = currentSpread.pageNumbers
+  const visibleBeats = project.beats
+    .filter((beat) => visiblePageNumbers.includes(beat.pageNumber))
+    .sort((firstBeat, secondBeat) => firstBeat.order - secondBeat.order)
+
   return (
     <section className="section-block script-block">
       <div className="section-heading">
         <h2 className="section-title">コマ内容</h2>
-        <span className="text-caption">2ページ分</span>
+        <button className="mini-button" type="button" onClick={onAddBeat}>
+          ＋
+        </button>
       </div>
       <div className="check-row is-checked">
         <span className="check-mark" aria-hidden="true" />
         <span>コマ番号自動入力</span>
       </div>
       <div className="beat-list">
-        {beats.map((beat) => (
+        {visibleBeats.map((beat) => (
           <ScriptBeatItem
-            body={beat.body}
-            character={beat.character}
-            key={beat.panelNo}
-            panelNo={beat.panelNo}
+            beat={beat}
+            characters={characters}
+            key={beat.id}
+            onDeleteBeat={onDeleteBeat}
+            onUpdateBeatText={onUpdateBeatText}
           />
         ))}
+        {visibleBeats.length === 0 && <p className="text-muted">このページのコマ内容はまだありません。</p>}
       </div>
     </section>
   )

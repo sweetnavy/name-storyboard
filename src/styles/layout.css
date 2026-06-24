@@ -26,6 +26,12 @@
   white-space: nowrap;
 }
 
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .pane-layout {
   display: grid;
   grid-template-columns:
@@ -119,9 +125,18 @@
   position: relative;
   width: min(35vw, 360px);
   min-width: 220px;
+  padding: 0;
+  border: 0;
   aspect-ratio: 0.707 / 1;
   background: var(--color-paper);
+  color: inherit;
+  cursor: pointer;
   box-shadow: var(--shadow-page);
+}
+
+.manga-page.is-selected {
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 72%, transparent);
+  outline-offset: 5px;
 }
 
 .page-frame {
