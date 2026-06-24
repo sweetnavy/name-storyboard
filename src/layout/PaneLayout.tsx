@@ -7,9 +7,9 @@ export function PaneLayout() {
   return (
     <main className="pane-layout">
       <LeftPane />
+      <SubPane />
       <CenterPane />
       <RightPane />
-      <SubPane />
     </main>
   )
 }

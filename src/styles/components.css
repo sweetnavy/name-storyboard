@@ -83,12 +83,49 @@
 }
 
 .ghost-button,
-.tool-button {
+.tool-button,
+.danger-button {
   min-height: 36px;
   border: var(--border-thin);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-ink);
+}
+
+.danger-button {
+  border-color: color-mix(in srgb, var(--color-danger) 42%, var(--color-border));
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.page-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.page-action-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inline-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: var(--space-2);
+}
+
+.number-field {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
 }
 
 .tool-grid {
@@ -174,14 +211,15 @@
 
 .spread-list {
   display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  overflow-x: auto;
+  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 
 .spread-list::-webkit-scrollbar {
-  height: 4px;
+  width: 4px;
 }
 
 .spread-list::-webkit-scrollbar-thumb {
@@ -189,11 +227,9 @@
 }
 
 .spread-thumb {
-  display: grid;
-  grid-template-columns: 64px max-content;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  min-width: 138px;
   padding: var(--space-2);
   border: var(--border-thin);
   border-radius: var(--radius-md);
@@ -201,15 +237,38 @@
   font-size: var(--text-sm);
 }
 
+.spread-thumb strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.thumb-note {
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
 .thumb-pages {
   display: flex;
   gap: 3px;
-  height: 42px;
+  width: 100%;
+  height: 46px;
 }
 
 .thumb-pages span {
-  display: block;
+  display: grid;
+  place-items: center;
   flex: 1;
   border: 1px solid rgb(32 33 36 / 28%);
   background: var(--color-paper);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.thumb-pages .is-empty-page {
+  border-style: dashed;
+  background: transparent;
 }

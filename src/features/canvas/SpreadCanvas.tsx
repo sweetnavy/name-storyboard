@@ -6,13 +6,12 @@ export function SpreadCanvas() {
       <div className="canvas-toolbar">
         <div>
           <p className="text-overline">Spread</p>
-          <h2 className="section-title">p.1 / p.2</h2>
+          <h2 className="section-title">1</h2>
         </div>
-        <span className="text-muted">白紙ネーム</span>
+        <span className="text-muted">日本式・右綴じ</span>
       </div>
-      <div className="spread-canvas">
-        <MangaPage pageNumber={1} variant="cover" />
-        <MangaPage pageNumber={2} />
+      <div className="spread-canvas spread-canvas-single">
+        <MangaPage pageNumber={1} side="left" variant="cover" />
       </div>
     </div>
   )

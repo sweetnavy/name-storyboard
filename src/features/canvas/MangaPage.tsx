@@ -2,21 +2,18 @@ import { PageFrame } from './PageFrame'
 
 type MangaPageProps = {
   pageNumber: number
+  side: 'left' | 'right'
   variant?: 'cover'
 }
 
-export function MangaPage({ pageNumber, variant }: MangaPageProps) {
+export function MangaPage({ pageNumber, side, variant }: MangaPageProps) {
   return (
-    <article className="manga-page">
+    <article className={`manga-page page-${side}`}>
       <PageFrame />
       {variant === 'cover' && (
-        <div className="cover-placeholder">
-          <span className="text-overline">Cover</span>
-          <strong>扉ページ</strong>
-          <span className="text-caption">タイトル・導入カット想定</span>
-        </div>
+        <span className="cover-badge">扉</span>
       )}
-      <span className="page-number">p.{pageNumber}</span>
+      <span className="page-number">{pageNumber}</span>
     </article>
   )
 }
