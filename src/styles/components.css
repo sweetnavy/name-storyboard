@@ -1,0 +1,215 @@
+.section-block,
+.navigator-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.section-block {
+  padding: var(--space-4);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.field-stack,
+.beat-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.display-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 56px;
+  justify-content: center;
+  padding: var(--space-3);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.danger-field {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  background: var(--color-danger-soft);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.check-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.check-row.is-checked .check-mark {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.check-row.is-checked .check-mark::after {
+  width: 8px;
+  height: 5px;
+  content: '';
+  border-bottom: 2px solid white;
+  border-left: 2px solid white;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ghost-button,
+.tool-button {
+  min-height: 36px;
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.tool-button {
+  padding: var(--space-2);
+  background: var(--color-surface-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.character-chip,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-thin);
+  border-radius: 999px;
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.chip-blue {
+  background: var(--color-blue);
+}
+
+.chip-green {
+  background: var(--color-green);
+}
+
+.chip-amber {
+  background: var(--color-amber);
+}
+
+.chip-rose {
+  background: var(--color-rose);
+}
+
+.status-pill {
+  border-color: color-mix(in srgb, var(--color-accent) 38%, var(--color-border));
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.script-block {
+  height: 100%;
+}
+
+.beat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-thin);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 1px 0 rgb(32 33 36 / 4%);
+}
+
+.beat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panel-no {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+}
+
+.spread-list {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.spread-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.spread-list::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.spread-thumb {
+  display: grid;
+  grid-template-columns: 64px max-content;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 138px;
+  padding: var(--space-2);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  font-size: var(--text-sm);
+}
+
+.thumb-pages {
+  display: flex;
+  gap: 3px;
+  height: 42px;
+}
+
+.thumb-pages span {
+  display: block;
+  flex: 1;
+  border: 1px solid rgb(32 33 36 / 28%);
+  background: var(--color-paper);
+}
