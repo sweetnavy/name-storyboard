@@ -13,21 +13,70 @@ export type Beat = {
   id: string
   pageNumber: number
   panelId?: string
-  no: number
+  no: number | null
   text: string
+  dialogues: DialogueLine[]
   characterIds: string[]
   order: number
 }
 
-export type Panel = {
+export type DialogueLine = {
   id: string
+  beatId: string
+  text: string
+  bubbleId?: string
+  shape: SpeechBubbleShape
+  order: number
+}
+
+export type PanelPoint = {
+  x: number
+  y: number
+}
+
+export type SpeechBubbleShape = 'ellipse' | 'rect'
+
+export type SpeechBubble = {
+  id: string
+  pageNumber: number
+  beatId: string
+  dialogueId: string
+  shape: SpeechBubbleShape
+  textDirection: 'horizontal' | 'vertical'
+  textFontSize?: number
+  textBox: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type ComicPanel = {
+  id: string
+  pageNumber: number
+  beatId?: string
+  x: number
+  y: number
+  width: number
+  height: number
+  textFontSize?: number
+  points?: PanelPoint[]
+  characterIds: string[]
+  memo?: string
+  order?: number
 }
 
 export type Page = {
   id: string
   pageNumber: number
   isCover: boolean
-  panels: Panel[]
+  panels: ComicPanel[]
+  bubbles: SpeechBubble[]
 }
 
 export type Project = {
@@ -36,8 +85,14 @@ export type Project = {
   title: string
   binding: Binding
   coverPage: boolean
+  autoNumberPanels: boolean
+  swapPanelContent: boolean
+  defaultBubbleTextDirection: 'horizontal' | 'vertical'
+  pageTextFontSize: number
   currentPageNumber: number
   selectedPageNumber: number
+  selectedPanelId?: string
+  selectedBubbleId?: string
   selectedCharacterId?: string
   pages: Page[]
   characters: Character[]

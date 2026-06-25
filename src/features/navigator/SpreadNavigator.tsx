@@ -1,12 +1,23 @@
+import { useState } from 'react'
 import type { Spread } from '../../types/storyboard'
 
 type SpreadNavigatorProps = {
   spreads: Spread[]
   currentSpreadId: string
   onGoToSpread: (pageNumber: number) => void
+  onMoveBeatToPage: (beatId: string, pageNumber: number) => void
+  onMovePanelToPage: (panelId: string, pageNumber: number) => void
 }
 
-export function SpreadNavigator({ currentSpreadId, onGoToSpread, spreads }: SpreadNavigatorProps) {
+export function SpreadNavigator({
+  currentSpreadId,
+  onGoToSpread,
+  onMoveBeatToPage,
+  onMovePanelToPage,
+  spreads,
+}: SpreadNavigatorProps) {
+  const [dropTargetId, setDropTargetId] = useState<string>()
+
   return (
     <section className="navigator-block">
       <div className="section-heading">
@@ -16,8 +27,37 @@ export function SpreadNavigator({ currentSpreadId, onGoToSpread, spreads }: Spre
       <div className="spread-list">
         {spreads.map((spread) => (
           <button
-            className={`spread-thumb ${spread.id === currentSpreadId ? 'is-active' : ''}`}
+            className={`spread-thumb ${spread.id === currentSpreadId ? 'is-active' : ''} ${
+              spread.id === dropTargetId ? 'is-drop-target' : ''
+            }`}
             key={spread.id}
+            onDragLeave={() => setDropTargetId(undefined)}
+            onDragOver={(event) => {
+              if (
+                event.dataTransfer.types.includes('application/x-storyboard-beat') ||
+                event.dataTransfer.types.includes('application/x-storyboard-panel')
+              ) {
+                event.preventDefault()
+                setDropTargetId(spread.id)
+                event.dataTransfer.dropEffect = 'move'
+              }
+            }}
+            onDrop={(event) => {
+              const beatId = event.dataTransfer.getData('application/x-storyboard-beat')
+              const panelId = event.dataTransfer.getData('application/x-storyboard-panel')
+              if (!beatId && !panelId) {
+                return
+              }
+
+              event.preventDefault()
+              event.stopPropagation()
+              setDropTargetId(undefined)
+              if (panelId) {
+                onMovePanelToPage(panelId, spread.pageNumbers[0])
+                return
+              }
+              onMoveBeatToPage(beatId, spread.pageNumbers[0])
+            }}
             onClick={() => onGoToSpread(spread.pageNumbers[0])}
             type="button"
           >

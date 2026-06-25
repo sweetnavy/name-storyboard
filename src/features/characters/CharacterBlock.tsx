@@ -39,6 +39,11 @@ export function CharacterBlock({
               className={`character-chip chip-${character.tone} ${
                 character.id === selectedCharacterId ? 'is-active' : ''
               }`}
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData('application/x-storyboard-character', character.id)
+                event.dataTransfer.effectAllowed = 'copy'
+              }}
               onClick={() => onSelectCharacter(character.id)}
               style={{ backgroundColor: character.color }}
               type="button"

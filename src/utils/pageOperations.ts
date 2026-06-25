@@ -1,10 +1,11 @@
-import type { Page, Project, Spread } from '../types/storyboard'
+import type { ComicPanel, Page, Project, Spread } from '../types/storyboard'
 
 const createBlankPage = (pageNumber: number): Page => ({
   id: `page-${Date.now()}-${pageNumber}`,
   pageNumber,
   isCover: false,
   panels: [],
+  bubbles: [],
 })
 
 export function renumberPages(pages: Page[], coverPage: boolean): Page[] {
@@ -12,7 +13,33 @@ export function renumberPages(pages: Page[], coverPage: boolean): Page[] {
     ...page,
     pageNumber: index + 1,
     isCover: coverPage && index === 0,
+    panels: (page.panels ?? []).map((panel) => ({
+      ...panel,
+      pageNumber: index + 1,
+    })),
+    bubbles: (page.bubbles ?? []).map((bubble) => ({
+      ...bubble,
+      pageNumber: index + 1,
+    })),
   }))
+}
+
+export function createComicPanel(
+  pageNumber: number,
+  beatId: string | undefined,
+  position?: { x: number; y: number },
+): ComicPanel {
+  return {
+    id: `panel-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+    pageNumber,
+    beatId,
+    x: position?.x ?? 32,
+    y: position?.y ?? 34,
+    width: 34,
+    height: 18,
+    characterIds: [],
+    order: Date.now(),
+  }
 }
 
 export function getSpreads(project: Project): Spread[] {
@@ -83,6 +110,7 @@ export function moveBySpread(project: Project, direction: -1 | 1): Project {
     ...project,
     currentPageNumber: nextSpread.pageNumbers[0],
     selectedPageNumber: nextSpread.pageNumbers[0],
+    selectedPanelId: undefined,
   }
 }
 
@@ -126,6 +154,8 @@ export function insertPages(project: Project, insertAt: number, count: number): 
     ...project,
     currentPageNumber: safeInsertAt,
     selectedPageNumber: safeInsertAt,
+    selectedPanelId: undefined,
+    selectedBubbleId: undefined,
     pages: renumberPages(nextPages, project.coverPage),
     beats: project.beats.map((beat) => ({
       ...beat,
@@ -158,12 +188,21 @@ export function deletePages(project: Project, startPageNumber: number, endPageNu
       pageNumber:
         beat.pageNumber > actualEnd ? beat.pageNumber - deletedPageNumbers.size : beat.pageNumber,
     }))
+  const remainingBubbleIds = new Set(nextPages.flatMap((page) => (page.bubbles ?? []).map((bubble) => bubble.id)))
 
   return {
     ...project,
     currentPageNumber: nextCurrentPageNumber,
     selectedPageNumber: nextCurrentPageNumber,
+    selectedPanelId: undefined,
+    selectedBubbleId: undefined,
     pages: renumberPages(nextPages, project.coverPage),
-    beats: shiftedBeats,
+    beats: shiftedBeats.map((beat) => ({
+      ...beat,
+      dialogues: (beat.dialogues ?? []).map((dialogue) => ({
+        ...dialogue,
+        bubbleId: dialogue.bubbleId && remainingBubbleIds.has(dialogue.bubbleId) ? dialogue.bubbleId : undefined,
+      })),
+    })),
   }
 }

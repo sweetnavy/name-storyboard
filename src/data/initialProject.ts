@@ -1,21 +1,20 @@
 import type { Project } from '../types/storyboard'
 
 export const CHARACTER_COLOR_PRESETS = [
-  '#dceaff',
-  '#dff0df',
-  '#f3e4bd',
-  '#f3dce4',
-  '#dcefee',
-  '#eadff4',
-  '#f0e7d8',
-  '#dfe6f3',
-  '#e7f0dc',
-  '#f5dddd',
-  '#d9edf7',
-  '#eee2cf',
-  '#e5e0f3',
-  '#dff1ea',
-  '#f2e0c9',
+  '#D8B72A',
+  '#9A611F',
+  '#F3A2A0',
+  '#C98598',
+  '#E4007F',
+  '#E94738',
+  '#B46AC6',
+  '#7893E6',
+  '#536A7F',
+  '#0078D7',
+  '#73D8CF',
+  '#6E9E43',
+  '#00846E',
+  '#8FB5A8',
 ]
 
 const createPage = (pageNumber: number, isCover = false) => ({
@@ -23,6 +22,7 @@ const createPage = (pageNumber: number, isCover = false) => ({
   pageNumber,
   isCover,
   panels: [],
+  bubbles: [],
 })
 
 export function createInitialProject(): Project {
@@ -32,6 +32,10 @@ export function createInitialProject(): Project {
     title: '雨上がりの放課後',
     binding: 'rtl',
     coverPage: true,
+    autoNumberPanels: true,
+    swapPanelContent: true,
+    defaultBubbleTextDirection: 'horizontal',
+    pageTextFontSize: 13,
     currentPageNumber: 1,
     selectedPageNumber: 1,
     pages: Array.from({ length: 7 }, (_, index) => createPage(index + 1, index === 0)),
@@ -52,6 +56,7 @@ export function createInitialProject(): Project {
         pageNumber: 1,
         no: 1,
         text: '雨の上がった校門前。澪が空を見上げ、少しだけ笑う。',
+        dialogues: [{ id: 'dialogue-001', beatId: 'beat-001', text: '雨、やんだ。', shape: 'ellipse', order: 1 }],
         characterIds: ['character-mio'],
         order: 1,
       },
@@ -60,6 +65,7 @@ export function createInitialProject(): Project {
         pageNumber: 2,
         no: 2,
         text: '奏が傘を閉じながら近づく。二人の距離はまだ少し遠い。',
+        dialogues: [{ id: 'dialogue-002', beatId: 'beat-002', text: '置いていかないでよ。', shape: 'ellipse', order: 1 }],
         characterIds: ['character-kanade'],
         order: 2,
       },
@@ -68,6 +74,7 @@ export function createInitialProject(): Project {
         pageNumber: 3,
         no: 3,
         text: '扉ページの余白にタイトルを置く想定。背景は薄い校舎シルエット。',
+        dialogues: [{ id: 'dialogue-003', beatId: 'beat-003', text: '', shape: 'ellipse', order: 1 }],
         characterIds: ['character-mio'],
         order: 3,
       },

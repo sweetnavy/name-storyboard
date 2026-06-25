@@ -3,9 +3,16 @@ import type { Project } from '../../types/storyboard'
 type ProjectInfoBlockProps = {
   project: Project
   onUpdateTitle: (title: string) => void
+  onToggleCoverPage: () => void
+  onUpdateBinding: (binding: Project['binding']) => void
 }
 
-export function ProjectInfoBlock({ onUpdateTitle, project }: ProjectInfoBlockProps) {
+export function ProjectInfoBlock({
+  onToggleCoverPage,
+  onUpdateBinding,
+  onUpdateTitle,
+  project,
+}: ProjectInfoBlockProps) {
   return (
     <section className="section-block">
       <div className="section-heading">
@@ -21,9 +28,29 @@ export function ProjectInfoBlock({ onUpdateTitle, project }: ProjectInfoBlockPro
             value={project.title}
           />
         </div>
-        <div className={`check-row ${project.coverPage ? 'is-checked' : ''}`}>
+        <button
+          className={`check-row check-button ${project.coverPage ? 'is-checked' : ''}`}
+          onClick={onToggleCoverPage}
+          type="button"
+        >
           <span className="check-mark" aria-hidden="true" />
           <span>1ページ目を扉にする</span>
+        </button>
+        <div className="segmented-control" aria-label="綴じ方向">
+          <button
+            className={project.binding === 'rtl' ? 'is-active' : ''}
+            onClick={() => onUpdateBinding('rtl')}
+            type="button"
+          >
+            右綴じ
+          </button>
+          <button
+            className={project.binding === 'ltr' ? 'is-active' : ''}
+            onClick={() => onUpdateBinding('ltr')}
+            type="button"
+          >
+            左綴じ
+          </button>
         </div>
       </div>
     </section>
