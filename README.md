@@ -1,75 +1,70 @@
-# React + TypeScript + Vite
+# Name Storyboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+漫画ネーム作成用のWebアプリです。
+見開きページを作成し、コマ・メモ・登場人物・セリフ・吹き出しを配置しながらネームを整理できます。
 
-Currently, two official plugins are available:
+## 概要
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Name Storyboard は、漫画のネーム作業をブラウザ上で行うためのツールです。
 
-## React Compiler
+主な機能：
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* 日本式右綴じ / 左綴じの切り替え
+* 1ページ目を扉ページとして扱う設定
+* ページの追加・削除
+* 見開き一覧からのページ移動
+* コマの追加・移動・リサイズ・削除
+* コマの自由変形
+* コマ内容の追加・編集・並べ替え
+* 登場人物チップの追加・管理
+* セリフ入力と吹き出し配置
+* 吹き出しの移動・リサイズ・縦書き / 横書き切り替え
+* JSON形式での保存 / 読み込み
+* ブラウザ内の自動保存
 
-## Expanding the ESLint configuration
+## データ保存について
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+作業内容はブラウザの localStorage に自動保存されます。
+同じブラウザで開き直した場合、前回の作業内容が復元されます。
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+ただし、ブラウザや端末を変えると自動保存データは共有されません。
+バックアップや別環境への移動には、ヘッダーの SAVE / LOAD から JSON ファイルを書き出し・読み込みしてください。
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 開発環境
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+このプロジェクトは Vite + React + TypeScript で作成しています。
 
+## セットアップ
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 開発サーバー起動
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm run dev
 ```
+
+表示されたローカルURLをブラウザで開いて確認できます。
+
+## ビルド
+
+```bash
+npm run build
+```
+
+## GitHub Pages
+
+GitHub Pages に公開する場合は、Vite の `base` 設定と GitHub Actions の deploy 設定を使用します。
+
+公開URL例：
+
+```txt
+https://sweetnavy.github.io/name-storyboard/
+```
+
+## 注意
+
+このアプリは個人制作中のプロトタイプです。
+実際の原稿・ネームデータを扱う場合は、こまめに JSON 保存でバックアップしてください。
