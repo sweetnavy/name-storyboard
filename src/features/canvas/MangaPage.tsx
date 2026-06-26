@@ -32,6 +32,12 @@ type MangaPageProps = {
       width?: number
       height?: number
       textFontSize?: number
+      textBox?: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
       points?: PanelPoint[] | null
     },
   ) => void
@@ -213,6 +219,12 @@ type ComicPanelViewProps = {
       width?: number
       height?: number
       textFontSize?: number
+      textBox?: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
       points?: PanelPoint[] | null
     },
   ) => void
@@ -246,14 +258,17 @@ function ComicPanelView({
   onUpdatePanel,
   panel,
 }: ComicPanelViewProps) {
-  const [isEditing, setIsEditing] = useState(false)
   const panelCharacterIds = Array.from(new Set([...(beat?.characterIds ?? []), ...panel.characterIds]))
   const panelCharacters = panelCharacterIds
     .map((characterId) => characters.find((character) => character.id === characterId))
     .filter((character): character is Character => Boolean(character))
 
   const startMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('.comic-panel-control, .comic-panel-edit, .free-transform-handle')) {
+    const target = event.target as HTMLElement
+    if (
+      target.closest('.comic-panel-control, .comic-panel-edit, .free-transform-handle') ||
+      (isSelected && target.closest('.comic-panel-textbox'))
+    ) {
       return
     }
 
@@ -412,20 +427,99 @@ function ComicPanelView({
     window.addEventListener('pointerup', stopPointMove)
   }
 
+  const startPanelTextBoxMove = (event: ReactPointerEvent<HTMLElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    onSelectPanel(panel.pageNumber, panel.id)
+    const panelElement = event.currentTarget.closest('.comic-panel')
+    if (!panelElement) {
+      return
+    }
+
+    const rect = panelElement.getBoundingClientRect()
+    const startX = event.clientX
+    const startY = event.clientY
+    const startTextBox = { ...panel.textBox }
+
+    const moveTextBox = (pointerEvent: PointerEvent) => {
+      pointerEvent.preventDefault()
+      const x = clamp(
+        startTextBox.x + ((pointerEvent.clientX - startX) / rect.width) * 100,
+        0,
+        100 - startTextBox.width,
+      )
+      const y = clamp(
+        startTextBox.y + ((pointerEvent.clientY - startY) / rect.height) * 100,
+        0,
+        100 - startTextBox.height,
+      )
+      onUpdatePanel(panel.pageNumber, panel.id, { textBox: { ...startTextBox, x, y } })
+    }
+
+    const stopTextBoxMove = () => {
+      window.removeEventListener('pointermove', moveTextBox)
+      window.removeEventListener('pointerup', stopTextBoxMove)
+    }
+
+    window.addEventListener('pointermove', moveTextBox)
+    window.addEventListener('pointerup', stopTextBoxMove)
+  }
+
+  const startPanelTextBoxResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    onSelectPanel(panel.pageNumber, panel.id)
+    const panelElement = event.currentTarget.closest('.comic-panel')
+    if (!panelElement) {
+      return
+    }
+
+    const rect = panelElement.getBoundingClientRect()
+    const startX = event.clientX
+    const startY = event.clientY
+    const startTextBox = { ...panel.textBox }
+
+    const resizeTextBox = (pointerEvent: PointerEvent) => {
+      const width = clamp(
+        startTextBox.width + ((pointerEvent.clientX - startX) / rect.width) * 100,
+        12,
+        100 - startTextBox.x,
+      )
+      const height = clamp(
+        startTextBox.height + ((pointerEvent.clientY - startY) / rect.height) * 100,
+        12,
+        100 - startTextBox.y,
+      )
+      onUpdatePanel(panel.pageNumber, panel.id, { textBox: { ...startTextBox, width, height } })
+    }
+
+    const stopTextBoxResize = () => {
+      window.removeEventListener('pointermove', resizeTextBox)
+      window.removeEventListener('pointerup', stopTextBoxResize)
+    }
+
+    window.addEventListener('pointermove', resizeTextBox)
+    window.addEventListener('pointerup', stopTextBoxResize)
+  }
+
   const panelPoints = panel.points ?? rectToPoints(panel)
   const shouldShowFreeHandles = isSelected && (freeTransformMode || panel.points)
   const clipPath = panel.points ? pointsToClipPath(panel.points, panel) : undefined
   const polygonPoints = panel.points ? pointsToSvgPolygon(panel.points, panel) : undefined
-  const contentWidth = panel.points ? getShortEdgeContentWidth(panel.points, panel) : 100
   const panelStyle = {
     left: `${panel.x}%`,
     top: `${panel.y}%`,
     width: `${panel.width}%`,
     height: `${panel.height}%`,
     clipPath,
-    '--panel-content-width': `${contentWidth}%`,
     '--panel-text-font-size': panel.textFontSize ? `${panel.textFontSize}px` : undefined,
-  } as CSSProperties & { '--panel-content-width': string; '--panel-text-font-size'?: string }
+  } as CSSProperties & { '--panel-text-font-size'?: string }
+  const panelTextBoxStyle = {
+    left: `${panel.textBox.x}%`,
+    top: `${panel.textBox.y}%`,
+    width: `${panel.textBox.width}%`,
+    height: `${panel.textBox.height}%`,
+  }
 
   return (
     <div
@@ -447,10 +541,6 @@ function ComicPanelView({
             ? 'move'
             : 'copy'
         }
-      }}
-      onDoubleClick={(event) => {
-        event.stopPropagation()
-        setIsEditing(true)
       }}
       onDrop={(event) => {
         const beatId = event.dataTransfer.getData('application/x-storyboard-beat')
@@ -482,29 +572,49 @@ function ComicPanelView({
       <span className="comic-panel-no">
         {beat ? `No.${beat.no ? String(beat.no).padStart(3, '0') : ''}` : 'No.'}
       </span>
-      {isEditing ? (
+      <div
+        className={`comic-panel-textbox ${isSelected ? 'is-selected' : ''}`}
+        onPointerDown={(event) => {
+          const target = event.target as HTMLElement
+          if (!isSelected || target.closest('.comic-panel-control, .comic-panel-edit')) {
+            return
+          }
+          startPanelTextBoxMove(event)
+        }}
+        style={panelTextBoxStyle}
+      >
         <textarea
-          autoFocus
           className="comic-panel-edit"
-          onBlur={() => setIsEditing(false)}
           onChange={(event) => onUpdatePanelBeatText(panel.id, event.target.value)}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation()
+            onSelectPanel(panel.pageNumber, panel.id)
+          }}
           onPointerDown={(event) => event.stopPropagation()}
           placeholder="コマ内容"
           value={beat?.text ?? ''}
         />
-      ) : (
-        <button
-          className="comic-panel-text comic-panel-text-button comic-panel-control"
-          onClick={(event) => {
-            event.stopPropagation()
-            setIsEditing(true)
-          }}
-          type="button"
-        >
-          {beat?.text || '本文'}
-        </button>
-      )}
+        {isSelected && (
+          <>
+            <button
+              aria-label="コマ本文領域を移動"
+              className="comic-panel-textbox-drag comic-panel-control"
+              onPointerDown={startPanelTextBoxMove}
+              type="button"
+            >
+              ⊹
+            </button>
+            <button
+              aria-label="コマ本文領域をリサイズ"
+              className="comic-panel-textbox-resize comic-panel-control"
+              onPointerDown={startPanelTextBoxResize}
+              type="button"
+            >
+              ⊿
+            </button>
+          </>
+        )}
+      </div>
       {panelCharacters.length > 0 && (
         <span className="comic-panel-character-row">
           {panelCharacters.map((character) => (
@@ -659,8 +769,8 @@ function SpeechBubbleView({
     const startBubble = { ...bubble }
 
     const resizeBubble = (pointerEvent: PointerEvent) => {
-      const width = clamp(startBubble.width + ((pointerEvent.clientX - startX) / rect.width) * 100, 12, 100 - bubble.x)
-      const height = clamp(startBubble.height + ((pointerEvent.clientY - startY) / rect.height) * 100, 7, 100 - bubble.y)
+      const width = clamp(startBubble.width + ((pointerEvent.clientX - startX) / rect.width) * 100, 7, 100 - bubble.x)
+      const height = clamp(startBubble.height + ((pointerEvent.clientY - startY) / rect.height) * 100, 5, 100 - bubble.y)
       onUpdateSpeechBubble(bubble.id, { width, height })
     }
 
@@ -774,7 +884,8 @@ function SpeechBubbleView({
       <div
         className={`speech-bubble-textbox ${isSelected ? 'is-selected' : ''}`}
         onPointerDown={(event) => {
-          if (!isSelected || (event.target as HTMLElement).closest('.speech-bubble-control')) {
+          const target = event.target as HTMLElement
+          if (!isSelected || target.closest('.speech-bubble-control, .speech-bubble-textarea')) {
             return
           }
           startTextBoxMove(event)
@@ -790,10 +901,8 @@ function SpeechBubbleView({
           }}
           onFocus={() => onUpdateSpeechBubble(bubble.id, {})}
           onPointerDown={(event) => {
-            if (isSelected) {
-              startTextBoxMove(event)
-              return
-            }
+            event.stopPropagation()
+            onUpdateSpeechBubble(bubble.id, {})
           }}
           placeholder="セリフ"
           rows={1}
@@ -996,19 +1105,6 @@ function pointsToSvgPolygon(points: PanelPoint[], panel: PanelBox) {
   return points
     .map((point) => `${toLocalPoint(point.x, panel.x, panel.width)},${toLocalPoint(point.y, panel.y, panel.height)}`)
     .join(' ')
-}
-
-function getShortEdgeContentWidth(points: PanelPoint[], panel: PanelBox) {
-  const topEdge = getPointDistance(points[0], points[1])
-  const bottomEdge = getPointDistance(points[3], points[2])
-  const shortEdgeWidth = (Math.min(topEdge, bottomEdge) / Math.max(panel.width, 1)) * 100
-  return clamp(shortEdgeWidth - 8, 42, 100)
-}
-
-function getPointDistance(start: PanelPoint, end: PanelPoint) {
-  const xDelta = end.x - start.x
-  const yDelta = end.y - start.y
-  return Math.sqrt(xDelta * xDelta + yDelta * yDelta)
 }
 
 function toLocalPoint(value: number, origin: number, size: number) {

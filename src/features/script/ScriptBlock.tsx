@@ -54,7 +54,12 @@ export function ScriptBlock({
   const visiblePageNumbers = currentSpread.pageNumbers
   const visibleBeats = project.beats
     .filter((beat) => visiblePageNumbers.includes(beat.pageNumber))
-    .sort((firstBeat, secondBeat) => firstBeat.order - secondBeat.order)
+    .sort(
+      (firstBeat, secondBeat) =>
+        firstBeat.pageNumber - secondBeat.pageNumber ||
+        firstBeat.order - secondBeat.order ||
+        (firstBeat.no ?? Number.MAX_SAFE_INTEGER) - (secondBeat.no ?? Number.MAX_SAFE_INTEGER),
+    )
 
   return (
     <section className="section-block script-block">

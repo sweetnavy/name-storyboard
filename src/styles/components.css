@@ -38,15 +38,90 @@
   background: var(--color-surface-soft);
 }
 
+.project-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.project-combobox {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+}
+
 .title-field {
   width: 100%;
   min-height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: 0 var(--space-2);
+  border: var(--border-thin);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-ink);
   font: inherit;
   font-weight: 700;
+}
+
+.project-list-toggle {
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  padding: 0;
+  border: var(--border-thin);
+  border-left: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.project-option-list {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 4px;
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.project-option-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.project-option-list button:hover,
+.project-option-list button.is-active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.project-option-list small {
+  color: var(--color-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .title-field:focus-visible {
@@ -190,6 +265,11 @@
   background: var(--color-danger-soft);
   color: var(--color-danger);
   font-weight: 700;
+}
+
+.project-delete-button {
+  min-height: 30px;
+  font-size: 0.75rem;
 }
 
 .page-action-stack {
@@ -672,12 +752,54 @@
   scrollbar-width: none;
 }
 
-.comic-panel.has-points .comic-panel-text,
-.comic-panel.has-points .comic-panel-edit,
-.comic-panel.has-points .comic-panel-character-row {
-  width: var(--panel-content-width, 100%);
-  max-width: var(--panel-content-width, 100%);
-  align-self: center;
+.comic-panel-textbox {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.comic-panel-textbox.is-selected {
+  outline: 1px dashed color-mix(in srgb, var(--color-accent) 48%, transparent);
+  outline-offset: 1px;
+}
+
+.comic-panel-textbox-drag,
+.comic-panel-textbox-resize {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  color: var(--color-accent);
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.comic-panel-textbox-drag {
+  top: -7px;
+  left: -7px;
+  border-radius: 999px;
+  cursor: grab;
+}
+
+.comic-panel-textbox-resize {
+  right: -8px;
+  bottom: -8px;
+  width: 17px;
+  height: 17px;
+  border-right: 2px solid var(--color-accent);
+  border-bottom: 2px solid var(--color-accent);
+  border-radius: 0 0 3px 0;
+  background: color-mix(in srgb, var(--color-surface) 64%, transparent);
+  cursor: nwse-resize;
 }
 
 .comic-panel-text::-webkit-scrollbar,
@@ -697,8 +819,8 @@
   position: relative;
   z-index: 1;
   width: 100%;
+  height: 100%;
   min-height: 0;
-  flex: 1;
   resize: none;
   padding: var(--space-1);
   border: var(--border-thin);

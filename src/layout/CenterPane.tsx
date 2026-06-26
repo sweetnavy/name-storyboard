@@ -30,6 +30,12 @@ type CenterPaneProps = {
       width?: number
       height?: number
       textFontSize?: number
+      textBox?: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
       points?: PanelPoint[] | null
     },
   ) => void

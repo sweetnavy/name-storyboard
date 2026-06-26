@@ -34,6 +34,13 @@ export type PanelPoint = {
   y: number
 }
 
+export type TextBox = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export type SpeechBubbleShape = 'ellipse' | 'rect'
 
 export type SpeechBubble = {
@@ -44,12 +51,7 @@ export type SpeechBubble = {
   shape: SpeechBubbleShape
   textDirection: 'horizontal' | 'vertical'
   textFontSize?: number
-  textBox: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }
+  textBox: TextBox
   x: number
   y: number
   width: number
@@ -65,6 +67,7 @@ export type ComicPanel = {
   width: number
   height: number
   textFontSize?: number
+  textBox: TextBox
   points?: PanelPoint[]
   characterIds: string[]
   memo?: string
@@ -97,6 +100,12 @@ export type Project = {
   pages: Page[]
   characters: Character[]
   beats: Beat[]
+}
+
+export type AppState = {
+  schemaVersion: 1
+  currentProjectId: string
+  projects: Project[]
 }
 
 export type Spread = {

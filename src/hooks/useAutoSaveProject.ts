@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import type { Project, SaveStatus } from '../types/storyboard'
-import { saveProject } from '../utils/storage'
+import type { AppState, SaveStatus } from '../types/storyboard'
+import { saveAppState } from '../utils/storage'
 
-export function useAutoSaveProject(project: Project): SaveStatus {
+export function useAutoSaveProject(appState: AppState): SaveStatus {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('保存済み')
 
   useEffect(() => {
     setSaveStatus('保存中...')
     const timeoutId = window.setTimeout(() => {
-      saveProject(project)
+      saveAppState(appState)
       setSaveStatus('保存済み')
     }, 500)
 
     return () => window.clearTimeout(timeoutId)
-  }, [project])
+  }, [appState])
 
   return saveStatus
 }

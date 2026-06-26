@@ -17,6 +17,7 @@ type PaneLayoutProps = {
     zoomOut: () => void
   }
   paneWidths: { leftPaneWidth: number; rightPaneWidth: number }
+  projectList: Project[]
   spreads: Spread[]
   currentSpread: Spread
   onGoToSpread: (pageNumber: number) => void
@@ -24,6 +25,10 @@ type PaneLayoutProps = {
   onDeletePages: (input: string) => void
   onSelectPage: (pageNumber: number) => void
   onUpdateProjectTitle: (title: string) => void
+  onNormalizeProjectTitle: () => void
+  onAddProject: () => void
+  onSelectProject: (projectId: string) => void
+  onDeleteCurrentProject: () => void
   onToggleCoverPage: () => void
   onUpdateBinding: (binding: Project['binding']) => void
   onToggleAutoNumberPanels: () => void
@@ -48,6 +53,12 @@ type PaneLayoutProps = {
       width?: number
       height?: number
       textFontSize?: number
+      textBox?: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
       points?: PanelPoint[] | null
     },
   ) => void
@@ -136,6 +147,8 @@ export function PaneLayout({
   onSelectCharacter,
   onSelectPanel,
   onSelectPage,
+  onAddProject,
+  onDeleteCurrentProject,
   onPlaceBeatOnPage,
   onPlaceDialogueOnPage,
   onAssignBeatToPanel,
@@ -154,11 +167,14 @@ export function PaneLayout({
   onToggleBubbleTextDirection,
   onUpdatePageTextFontSize,
   onUpdateProjectTitle,
+  onNormalizeProjectTitle,
+  onSelectProject,
   onToggleCoverPage,
   onUpdateBinding,
   onToggleAutoNumberPanels,
   onToggleSwapPanelContent,
   paneWidths,
+  projectList,
   project,
   spreads,
 }: PaneLayoutProps) {
@@ -194,10 +210,15 @@ export function PaneLayout({
         onDeletePages={onDeletePages}
         onInsertPages={onInsertPages}
         onSelectCharacter={onSelectCharacter}
+        onAddProject={onAddProject}
+        onDeleteCurrentProject={onDeleteCurrentProject}
+        onNormalizeProjectTitle={onNormalizeProjectTitle}
+        onSelectProject={onSelectProject}
         onToggleCoverPage={onToggleCoverPage}
         onUpdateBinding={onUpdateBinding}
         onUpdateCharacterColor={onUpdateCharacterColor}
         onUpdateProjectTitle={onUpdateProjectTitle}
+        projects={projectList}
         project={project}
       />
       <button

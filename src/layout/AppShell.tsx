@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { SetStateAction } from 'react'
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject'
 import { useCanvasZoom } from '../hooks/useCanvasZoom'
 import { usePaneWidths } from '../hooks/usePaneWidths'
@@ -11,23 +12,85 @@ import {
   insertPages,
   parsePageRange,
 } from '../utils/pageOperations'
-import { loadProject, parseProjectJson, saveProject } from '../utils/storage'
+import { createUntitledProject, loadAppState, parseProjectJson, saveAppState } from '../utils/storage'
 import { PaneLayout } from './PaneLayout'
 
+const OVERWRITE_SAVE_STORAGE_KEY = 'name-storyboard-overwrite-save-v1'
+
+type FileSystemWritableFileStreamLike = {
+  write: (data: Blob) => Promise<void>
+  close: () => Promise<void>
+}
+
+type FileSystemFileHandleLike = {
+  createWritable: () => Promise<FileSystemWritableFileStreamLike>
+}
+
+type WindowWithSavePicker = Window & {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string
+    types?: Array<{
+      description: string
+      accept: Record<string, string[]>
+    }>
+  }) => Promise<FileSystemFileHandleLike>
+}
+
 export function AppShell() {
-  const [project, setProject] = useState(loadProject)
+  const [appState, setAppState] = useState(loadAppState)
+  const [overwriteCurrentFile, setOverwriteCurrentFile] = useState(
+    () => window.localStorage.getItem(OVERWRITE_SAVE_STORAGE_KEY) === 'true',
+  )
+  const [isInfoOpen, setIsInfoOpen] = useState(false)
   const [projectHistory, setProjectHistory] = useState<{ past: Project[]; future: Project[] }>({
     past: [],
     future: [],
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const project = appState.projects.find((item) => item.id === appState.currentProjectId) ?? appState.projects[0]
   const previousProjectRef = useRef(project)
   const skipHistoryRef = useRef(false)
-  const saveStatus = useAutoSaveProject(project)
+  const saveStatus = useAutoSaveProject(appState)
   const canvasZoom = useCanvasZoom()
   const { paneWidths, resizePane } = usePaneWidths()
   const spreads = getSpreads(project)
   const currentSpread = getCurrentSpread(project)
+
+  useEffect(() => {
+    window.localStorage.setItem(OVERWRITE_SAVE_STORAGE_KEY, String(overwriteCurrentFile))
+  }, [overwriteCurrentFile])
+
+  useEffect(() => {
+    if (!isInfoOpen) {
+      return
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsInfoOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [isInfoOpen])
+
+  const setProject = (action: SetStateAction<Project>) => {
+    setAppState((currentAppState) => {
+      const currentProject =
+        currentAppState.projects.find((item) => item.id === currentAppState.currentProjectId) ??
+        currentAppState.projects[0]
+      const nextProject = typeof action === 'function'
+        ? (action as (currentProject: Project) => Project)(currentProject)
+        : action
+
+      return {
+        ...currentAppState,
+        currentProjectId: nextProject.id,
+        projects: currentAppState.projects.map((item) => (item.id === currentProject.id ? nextProject : item)),
+      }
+    })
+  }
 
   useEffect(() => {
     if (previousProjectRef.current === project) {
@@ -83,6 +146,61 @@ export function AppShell() {
 
   const updateProjectTitle = (title: string) => {
     setProject((currentProject) => ({ ...currentProject, title }))
+  }
+
+  const normalizeProjectTitle = () => {
+    setProject((currentProject) => ({
+      ...currentProject,
+      title: currentProject.title.trim() || getNextUntitledTitle(appState.projects, currentProject.id),
+    }))
+  }
+
+  const addProject = () => {
+    const nextProject = createUntitledProject(getNextUntitledTitle(appState.projects))
+    saveAppState(appState)
+    skipHistoryRef.current = true
+    previousProjectRef.current = nextProject
+    setProjectHistory({ past: [], future: [] })
+    setAppState((currentAppState) => ({
+      ...currentAppState,
+      currentProjectId: nextProject.id,
+      projects: [...currentAppState.projects, nextProject],
+    }))
+  }
+
+  const selectProject = (projectId: string) => {
+    const nextProject = appState.projects.find((item) => item.id === projectId)
+    if (!nextProject || nextProject.id === project.id) {
+      return
+    }
+
+    skipHistoryRef.current = true
+    previousProjectRef.current = nextProject
+    setProjectHistory({ past: [], future: [] })
+    setAppState((currentAppState) => ({
+      ...currentAppState,
+      currentProjectId: nextProject.id,
+    }))
+  }
+
+  const deleteCurrentProject = () => {
+    if (!window.confirm('この作品を削除します。よろしいですか？')) {
+      return
+    }
+
+    setAppState((currentAppState) => {
+      const remainingProjects = currentAppState.projects.filter((item) => item.id !== currentAppState.currentProjectId)
+      const nextProjects = remainingProjects.length ? remainingProjects : [createUntitledProject()]
+      const nextProject = nextProjects[0]
+      skipHistoryRef.current = true
+      previousProjectRef.current = nextProject
+      setProjectHistory({ past: [], future: [] })
+      return {
+        ...currentAppState,
+        currentProjectId: nextProject.id,
+        projects: nextProjects,
+      }
+    })
   }
 
   const goToSpread = (pageNumber: number) => {
@@ -504,6 +622,12 @@ export function AppShell() {
       width?: number
       height?: number
       textFontSize?: number
+      textBox?: {
+        x: number
+        y: number
+        width: number
+        height: number
+      }
       points?: PanelPoint[] | null
     },
   ) => {
@@ -869,7 +993,12 @@ export function AppShell() {
     setProject((currentProject) => {
       const visibleBeats = currentProject.beats
         .filter((beat) => pageNumbers.includes(beat.pageNumber))
-        .sort((firstBeat, secondBeat) => firstBeat.order - secondBeat.order)
+        .sort(
+          (firstBeat, secondBeat) =>
+            firstBeat.pageNumber - secondBeat.pageNumber ||
+            firstBeat.order - secondBeat.order ||
+            (firstBeat.no ?? Number.MAX_SAFE_INTEGER) - (secondBeat.no ?? Number.MAX_SAFE_INTEGER),
+        )
       const fromIndex = visibleBeats.findIndex((beat) => beat.id === dragBeatId)
       const toIndex = visibleBeats.findIndex((beat) => beat.id === targetBeatId)
 
@@ -1130,15 +1259,41 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [project.selectedPanelId])
 
-  const saveJson = () => {
-    const fileName = `${sanitizeFileName(project.title || 'storyboard')}.storyboard.json`
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' })
+  const downloadJson = (blob: Blob, fileName: string) => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = fileName
     link.click()
     window.URL.revokeObjectURL(url)
+  }
+
+  const saveJson = async () => {
+    const fileName = `${sanitizeFileName(project.title || 'storyboard')}.storyboard.json`
+    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' })
+    const savePicker = (window as WindowWithSavePicker).showSaveFilePicker
+
+    if (overwriteCurrentFile && savePicker) {
+      try {
+        const handle = await savePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Storyboard JSON',
+              accept: { 'application/json': ['.json'] },
+            },
+          ],
+        })
+        const writable = await handle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+        return
+      } catch {
+        window.alert('この環境では直接上書きできないため、JSONとして保存しました。')
+      }
+    }
+
+    downloadJson(blob, fileName)
   }
 
   const loadJson = async (file: File | undefined) => {
@@ -1153,11 +1308,24 @@ export function AppShell() {
       return
     }
 
-    saveProject(loadedProject)
+    const projectToAdd = {
+      ...loadedProject,
+      id: `project-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+      title: loadedProject.title?.trim() || getNextUntitledTitle(appState.projects),
+    }
+    saveAppState({
+      ...appState,
+      currentProjectId: projectToAdd.id,
+      projects: [...appState.projects, projectToAdd],
+    })
     skipHistoryRef.current = true
-    previousProjectRef.current = loadedProject
+    previousProjectRef.current = projectToAdd
     setProjectHistory({ past: [], future: [] })
-    setProject(loadedProject)
+    setAppState((currentAppState) => ({
+      ...currentAppState,
+      currentProjectId: projectToAdd.id,
+      projects: [...currentAppState.projects, projectToAdd],
+    }))
   }
 
   return (
@@ -1167,12 +1335,28 @@ export function AppShell() {
           <p className="text-overline">Name Storyboard</p>
           <div className="header-title-row">
             <h1 className="app-title">漫画ネーム作成</h1>
-            <button className="mini-button" type="button" onClick={saveJson}>
+            <button
+              aria-label="使い方を開く"
+              className="info-button"
+              onClick={() => setIsInfoOpen(true)}
+              type="button"
+            >
+              <InfoIcon />
+            </button>
+            <button className="mini-button" type="button" onClick={() => void saveJson()}>
               SAVE
             </button>
             <button className="mini-button" type="button" onClick={() => fileInputRef.current?.click()}>
               LOAD
             </button>
+            <label className="header-check">
+              <input
+                checked={overwriteCurrentFile}
+                onChange={(event) => setOverwriteCurrentFile(event.currentTarget.checked)}
+                type="checkbox"
+              />
+              <span>現在のファイルに上書き</span>
+            </label>
             <input
               accept="application/json,.json"
               hidden
@@ -1190,6 +1374,7 @@ export function AppShell() {
           <span className="text-muted">全 {project.pages.length} ページ</span>
         </div>
       </header>
+      {isInfoOpen && <HelpModal onClose={() => setIsInfoOpen(false)} />}
       <PaneLayout
         currentSpread={currentSpread}
         canRedo={projectHistory.future.length > 0}
@@ -1233,6 +1418,10 @@ export function AppShell() {
         onUpdatePanelBeatText={updatePanelBeatText}
         onUpdateCharacterColor={updateCharacterColor}
         onUpdateProjectTitle={updateProjectTitle}
+        onNormalizeProjectTitle={normalizeProjectTitle}
+        onAddProject={addProject}
+        onSelectProject={selectProject}
+        onDeleteCurrentProject={deleteCurrentProject}
         onToggleCoverPage={toggleCoverPage}
         onUpdateBinding={updateBinding}
         onToggleAutoNumberPanels={toggleAutoNumberPanels}
@@ -1244,6 +1433,7 @@ export function AppShell() {
         canvasZoom={canvasZoom}
         paneWidths={paneWidths}
         project={project}
+        projectList={appState.projects}
         spreads={spreads}
       />
     </div>
@@ -1252,6 +1442,115 @@ export function AppShell() {
 
 function sanitizeFileName(value: string) {
   return value.trim().replace(/[\\/:*?"<>|]/g, '_') || 'storyboard'
+}
+
+function getNextUntitledTitle(projects: Project[], excludeProjectId?: string) {
+  const usedTitles = new Set(
+    projects
+      .filter((project) => project.id !== excludeProjectId)
+      .map((project) => project.title.trim()),
+  )
+
+  for (let index = 0; index < 1000; index += 1) {
+    const title = `無題_${String(index).padStart(2, '0')}`
+    if (!usedTitles.has(title)) {
+      return title
+    }
+  }
+
+  return `無題_${Date.now()}`
+}
+
+function InfoIcon() {
+  return (
+    <svg aria-hidden="true" className="button-icon" viewBox="0 -960 960 960">
+      <path
+        fill="currentColor"
+        d="M505.5-298.35Q516-308.7 516-324v-168q0-15.3-10.29-25.65Q495.42-528 480.21-528t-25.71 10.35Q444-507.3 444-492v168q0 15.3 10.29 25.65Q464.58-288 479.79-288t25.71-10.35Zm0-311.94q10.5-10.29 10.5-25.5t-10.29-25.71q-10.29-10.5-25.5-10.5t-25.71 10.29q-10.5 10.29-10.5 25.5t10.29 25.71q10.29 10.5 25.5 10.5t25.71-10.29ZM480.28-96Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm-.28-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221 91t-91 221q0 130 91 221t221 91Zm0-312Z"
+      />
+    </svg>
+  )
+}
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="modal-overlay" onMouseDown={onClose} role="presentation">
+      <section
+        aria-labelledby="help-modal-title"
+        aria-modal="true"
+        className="help-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="help-modal-header">
+          <h2 className="section-title" id="help-modal-title">使い方</h2>
+          <button aria-label="使い方を閉じる" className="mini-button icon-button" onClick={onClose} type="button">
+            ×
+          </button>
+        </div>
+        <div className="help-modal-body">
+          <HelpSection title="基本" items={[
+            '左の「作品情報」から作品タイトルを編集できます。',
+            '＋ボタンで新しい作品を追加できます。',
+            '作品名の入力欄から、作成済みの作品を選択できます。',
+            '「この作品を削除する」で現在の作品を削除できます。',
+          ]} />
+          <HelpSection title="ページ" items={[
+            '見開き一覧をクリックすると、そのページへ移動できます。',
+            'ページ番号欄に 3 や 2-4 のように入力して、ページを挿入 / 削除できます。',
+            '「1ページ目を扉にする」をOFFにすると、1ページ目から見開き表示になります。',
+            '右綴じ / 左綴じを切り替えできます。',
+          ]} />
+          <HelpSection title="コマ" items={[
+            '中央上部の「コマ追加」で、選択中ページにコマを追加できます。',
+            'コマはドラッグで移動でき、角やハンドルでサイズ変更できます。',
+            '自由変形モードでは、コマの四隅を動かして台形にできます。',
+            'コマ同士をドラッグで重ねると、簡易Swapできます。',
+            'Delete / Backspace、またはコマ上の削除操作でコマを削除できます。',
+          ]} />
+          <HelpSection title="コマ内容" items={[
+            '右ペインの「コマ内容」で、コマのメモを編集できます。',
+            '＋ボタンでコマ内容を追加できます。',
+            '右ペインのカードをドラッグして並べ替えると、コマNo.を整理できます。',
+            'コマ番号自動入力がONの場合、ページごとにNo.001から自動採番されます。',
+            'コマ内容をページ上にドラッグすると、コマとして配置できます。',
+          ]} />
+          <HelpSection title="登場人物" items={[
+            '左ペインの「登場人物」から人物を追加できます。',
+            '登場人物チップをコマやコマ内容へドラッグすると、人物を紐付けできます。',
+            'チップの×で取り外しできます。',
+          ]} />
+          <HelpSection title="セリフ・吹き出し" items={[
+            'コマ内容内の「セリフ」欄で、セリフ行を追加できます。',
+            '○をページへドラッグすると、吹き出しを配置できます。',
+            '●をクリックすると、配置済み吹き出しを選択できます。',
+            '吹き出し形状ボタンで、セリフ / モノローグを切り替えできます。',
+            'セリフ方向ボタンで、横書き / 縦書きを切り替えできます。',
+            '吹き出しや吹き出し内テキストボックスは、移動・サイズ変更できます。',
+          ]} />
+          <HelpSection title="保存" items={[
+            '作業内容はブラウザ内に自動保存されます。',
+            'SAVEで現在の作品をJSONとして保存できます。',
+            'LOADでJSONを読み込めます。',
+            '別ブラウザや別PCへ移動する場合は、JSON保存を使ってください。',
+          ]} />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function HelpSection({ title, items }: { title: string; items: string[] }) {
+  return (
+    <section className="help-section">
+      <h3>{title}</h3>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </section>
+  )
 }
 
 function confirmBeatDelete(no: number | null) {

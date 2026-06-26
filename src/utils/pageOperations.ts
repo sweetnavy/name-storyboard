@@ -37,6 +37,7 @@ export function createComicPanel(
     y: position?.y ?? 34,
     width: 34,
     height: 18,
+    textBox: { x: 8, y: 18, width: 84, height: 64 },
     characterIds: [],
     order: Date.now(),
   }

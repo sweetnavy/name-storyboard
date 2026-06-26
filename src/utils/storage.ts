@@ -1,9 +1,11 @@
 import { CHARACTER_COLOR_PRESETS, createInitialProject } from '../data/initialProject'
-import type { Beat, Character, Page, Project } from '../types/storyboard'
+import type { AppState, Beat, Character, Page, Project } from '../types/storyboard'
 import { renumberPages } from './pageOperations'
 
 export const PROJECT_STORAGE_KEY = 'name-storyboard-project-v1'
+export const APP_STATE_STORAGE_KEY = 'name-storyboard-app-state-v1'
 const DEFAULT_TEXT_FONT_SIZE = 13
+const DEFAULT_PROJECT_TITLE = '無題_00'
 
 function normalizeFontSize(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value)
@@ -17,11 +19,10 @@ function getDefaultBubbleTextBox(shape: 'ellipse' | 'rect') {
     : { x: 14, y: 12, width: 72, height: 76 }
 }
 
-function normalizeBubbleTextBox(
+function normalizeTextBox(
   value: unknown,
-  shape: 'ellipse' | 'rect',
+  fallback: { x: number; y: number; width: number; height: number },
 ) {
-  const fallback = getDefaultBubbleTextBox(shape)
   if (!value || typeof value !== 'object') {
     return fallback
   }
@@ -53,6 +54,34 @@ function isProject(value: unknown): value is Project {
 
   const candidate = value as Partial<Project>
   return candidate.schemaVersion === 1 && Array.isArray(candidate.pages)
+}
+
+function isAppState(value: unknown): value is AppState {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const candidate = value as Partial<AppState>
+  return candidate.schemaVersion === 1 && Array.isArray(candidate.projects)
+}
+
+export function createUntitledProject(title = DEFAULT_PROJECT_TITLE): Project {
+  const initialProject = createInitialProject()
+  return normalizeProject({
+    ...initialProject,
+    id: `project-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+    title,
+    currentPageNumber: 1,
+    selectedPageNumber: 1,
+    selectedPanelId: undefined,
+    selectedBubbleId: undefined,
+    pages: initialProject.pages.map((page) => ({
+      ...page,
+      panels: [],
+      bubbles: [],
+    })),
+    beats: [],
+  })
 }
 
 function normalizeCharacters(project: Project): Character[] {
@@ -109,6 +138,7 @@ export function normalizeProject(project: Project): Project {
         width: panel.width ?? 34,
         height: panel.height ?? 18,
         textFontSize: normalizeFontSize(panel.textFontSize),
+        textBox: normalizeTextBox(panel.textBox, { x: 8, y: 18, width: 84, height: 64 }),
         points: Array.isArray(panel.points) && panel.points.length === 4
           ? panel.points.map((point) => ({
               x: Math.min(Math.max(point.x, 0), 100),
@@ -123,7 +153,7 @@ export function normalizeProject(project: Project): Project {
         shape: bubble.shape ?? 'ellipse',
         textDirection: bubble.textDirection ?? 'horizontal',
         textFontSize: normalizeFontSize(bubble.textFontSize),
-        textBox: normalizeBubbleTextBox(bubble.textBox, bubble.shape ?? 'ellipse'),
+        textBox: normalizeTextBox(bubble.textBox, getDefaultBubbleTextBox(bubble.shape ?? 'ellipse')),
         x: bubble.x ?? 40,
         y: bubble.y ?? 36,
         width: bubble.width ?? 24,
@@ -141,7 +171,7 @@ export function normalizeProject(project: Project): Project {
   const panelIds = new Set(pages.flatMap((page) => page.panels.map((panel) => panel.id)))
   const bubbleIds = new Set(pages.flatMap((page) => page.bubbles.map((bubble) => bubble.id)))
 
-  return {
+  const normalizedProject = {
     ...project,
     binding: project.binding ?? 'rtl',
     coverPage: project.coverPage ?? true,
@@ -162,6 +192,23 @@ export function normalizeProject(project: Project): Project {
     selectedCharacterId: project.selectedCharacterId,
     beats: normalizeBeats({ ...project, pages }, characters, bubbleIds),
   }
+
+  if (!normalizedProject.autoNumberPanels) {
+    return normalizedProject
+  }
+
+  const numberedBeats = normalizedProject.beats.map((beat) => ({ ...beat }))
+  for (const page of normalizedProject.pages) {
+    numberedBeats
+      .filter((beat) => beat.pageNumber === page.pageNumber)
+      .sort((firstBeat, secondBeat) => firstBeat.order - secondBeat.order)
+      .forEach((beat, index) => {
+        beat.no = index + 1
+        beat.order = index + 1
+      })
+  }
+
+  return { ...normalizedProject, beats: numberedBeats }
 }
 
 export function loadProject(): Project {
@@ -184,6 +231,65 @@ export function loadProject(): Project {
 
 export function saveProject(project: Project) {
   window.localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project))
+}
+
+export function normalizeAppState(appState: AppState): AppState {
+  const projects = (appState.projects?.length ? appState.projects : [createUntitledProject()])
+    .map((project) => normalizeProject({
+      ...project,
+      title: project.title?.trim() || DEFAULT_PROJECT_TITLE,
+    }))
+  const currentProjectId = projects.some((project) => project.id === appState.currentProjectId)
+    ? appState.currentProjectId
+    : projects[0].id
+
+  return {
+    schemaVersion: 1,
+    currentProjectId,
+    projects,
+  }
+}
+
+export function loadAppState(): AppState {
+  try {
+    const storedAppState = window.localStorage.getItem(APP_STATE_STORAGE_KEY)
+    if (storedAppState) {
+      const parsedValue: unknown = JSON.parse(storedAppState)
+      if (isAppState(parsedValue)) {
+        return normalizeAppState(parsedValue)
+      }
+    }
+
+    const storedProject = window.localStorage.getItem(PROJECT_STORAGE_KEY)
+    if (storedProject) {
+      const parsedValue: unknown = JSON.parse(storedProject)
+      if (isProject(parsedValue)) {
+        const project = normalizeProject(parsedValue)
+        return normalizeAppState({
+          schemaVersion: 1,
+          currentProjectId: project.id,
+          projects: [project],
+        })
+      }
+    }
+  } catch {
+    // Fall back below.
+  }
+
+  const project = createUntitledProject()
+  return {
+    schemaVersion: 1,
+    currentProjectId: project.id,
+    projects: [project],
+  }
+}
+
+export function saveAppState(appState: AppState) {
+  window.localStorage.setItem(APP_STATE_STORAGE_KEY, JSON.stringify(appState))
+  const currentProject = appState.projects.find((project) => project.id === appState.currentProjectId)
+  if (currentProject) {
+    saveProject(currentProject)
+  }
 }
 
 export function parseProjectJson(text: string): Project | null {
