@@ -68,3 +68,6 @@ https://sweetnavy.github.io/name-storyboard/
 
 このアプリは個人制作中のプロトタイプです。
 実際の原稿・ネームデータを扱う場合は、こまめに JSON 保存でバックアップしてください。
+
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A5V42179V6)

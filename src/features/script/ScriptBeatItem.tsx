@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { Beat, Character } from '../../types/storyboard'
+import { getCharacterChipStyle } from '../../utils/color'
 
 type ScriptBeatItemProps = {
   beat: Beat
@@ -208,7 +209,7 @@ export function ScriptBeatItem({
                 event.stopPropagation()
                 onRemoveCharacterFromBeat(beat.id, character.id)
               }}
-              style={{ backgroundColor: character.color }}
+              style={getCharacterChipStyle(character.color)}
               type="button"
             >
               {character.name} ×

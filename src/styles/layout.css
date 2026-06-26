@@ -220,10 +220,7 @@
 }
 
 .spread-canvas {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: var(--space-4);
+  display: block;
   flex: 1;
   min-height: 520px;
   padding: max(var(--space-6), 36px);
@@ -237,16 +234,38 @@
   background-size: 28px 28px;
 }
 
+.spread-canvas.is-pan-ready {
+  cursor: grab;
+}
+
+.spread-canvas.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
 .spread-page-group {
+  position: absolute;
+  top: calc((100% - var(--stage-height, 100%)) / 2);
+  left: calc((100% - var(--stage-width, 100%)) / 2);
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-4);
-  min-width: 100%;
+  width: max-content;
+  min-width: 0;
+  transform: scale(var(--canvas-zoom, 1));
+  transform-origin: top left;
 }
 
 .spread-canvas-single {
   justify-content: flex-start;
+}
+
+.spread-stage-size {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .manga-page {

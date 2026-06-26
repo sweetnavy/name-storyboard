@@ -2,6 +2,7 @@ import { PageFrame } from './PageFrame'
 import { useState } from 'react'
 import type { CSSProperties, DragEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { Beat, Character, ComicPanel, Page, PanelPoint, SpeechBubble } from '../../types/storyboard'
+import { getCharacterChipStyle } from '../../utils/color'
 
 type MangaPageProps = {
   page: Page
@@ -127,6 +128,7 @@ export function MangaPage({
   return (
     <article
       className={`manga-page page-${side} ${isSelected ? 'is-selected' : ''}`}
+      data-page-number={page.pageNumber}
       onClick={() => onSelectPage(page.pageNumber)}
       onDragOver={(event) => {
         if (
@@ -625,7 +627,7 @@ function ComicPanelView({
                 event.stopPropagation()
                 onRemoveCharacterFromPanel(panel.id, character.id)
               }}
-              style={{ backgroundColor: character.color }}
+              style={getCharacterChipStyle(character.color)}
               type="button"
             >
               {character.name} ×

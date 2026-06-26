@@ -3,7 +3,7 @@ import type { SetStateAction } from 'react'
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject'
 import { useCanvasZoom } from '../hooks/useCanvasZoom'
 import { usePaneWidths } from '../hooks/usePaneWidths'
-import type { PanelPoint, Project } from '../types/storyboard'
+import type { DrawingStroke, DrawingTool, PanelPoint, Project } from '../types/storyboard'
 import {
   deletePages,
   createComicPanel,
@@ -16,6 +16,8 @@ import { createUntitledProject, loadAppState, parseProjectJson, saveAppState } f
 import { PaneLayout } from './PaneLayout'
 
 const OVERWRITE_SAVE_STORAGE_KEY = 'name-storyboard-overwrite-save-v1'
+const DRAWING_SETTINGS_STORAGE_KEY = 'name-storyboard-drawing-settings-v1'
+const DRAWING_ERASER_HIT_SCALE = 0.22
 
 type FileSystemWritableFileStreamLike = {
   write: (data: Blob) => Promise<void>
@@ -42,6 +44,12 @@ export function AppShell() {
     () => window.localStorage.getItem(OVERWRITE_SAVE_STORAGE_KEY) === 'true',
   )
   const [isInfoOpen, setIsInfoOpen] = useState(false)
+  const [drawingMode, setDrawingMode] = useState(false)
+  const [selectedDrawingTool, setSelectedDrawingTool] = useState<DrawingTool>('pen')
+  const [penColor, setPenColor] = useState('#202124')
+  const [penWidth, setPenWidth] = useState(4)
+  const [eraserWidth, setEraserWidth] = useState(12)
+  const [drawingRedoStack, setDrawingRedoStack] = useState<DrawingStroke[]>([])
   const [projectHistory, setProjectHistory] = useState<{ past: Project[]; future: Project[] }>({
     past: [],
     future: [],
@@ -59,6 +67,36 @@ export function AppShell() {
   useEffect(() => {
     window.localStorage.setItem(OVERWRITE_SAVE_STORAGE_KEY, String(overwriteCurrentFile))
   }, [overwriteCurrentFile])
+
+  useEffect(() => {
+    try {
+      const storedValue = window.localStorage.getItem(DRAWING_SETTINGS_STORAGE_KEY)
+      if (!storedValue) {
+        return
+      }
+      const settings = JSON.parse(storedValue) as Partial<{
+        drawingMode: boolean
+        selectedDrawingTool: DrawingTool
+        penColor: string
+        penWidth: number
+        eraserWidth: number
+      }>
+      setDrawingMode(Boolean(settings.drawingMode))
+      setSelectedDrawingTool(settings.selectedDrawingTool === 'eraser' ? 'eraser' : 'pen')
+      setPenColor(settings.penColor ?? '#202124')
+      setPenWidth(clampNumber(settings.penWidth ?? 4, 1, 24))
+      setEraserWidth(clampNumber(settings.eraserWidth ?? 12, 4, 48))
+    } catch {
+      // Keep defaults.
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      DRAWING_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ drawingMode, selectedDrawingTool, penColor, penWidth, eraserWidth }),
+    )
+  }, [drawingMode, eraserWidth, penColor, penWidth, selectedDrawingTool])
 
   useEffect(() => {
     if (!isInfoOpen) {
@@ -232,6 +270,109 @@ export function AppShell() {
 
   const updateBinding = (binding: Project['binding']) => {
     setProject((currentProject) => ({ ...currentProject, binding }))
+  }
+
+  const selectDrawingTool = (tool: DrawingTool) => {
+    setSelectedDrawingTool(tool)
+    setDrawingMode(true)
+  }
+
+  const selectDrawingColor = (color: string) => {
+    setPenColor(color)
+    setSelectedDrawingTool('pen')
+    setDrawingMode(true)
+  }
+
+  const addDrawingStroke = (pageNumber: number, stroke: DrawingStroke) => {
+    setDrawingRedoStack([])
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((page) =>
+        page.pageNumber === pageNumber
+          ? { ...page, drawingStrokes: [...page.drawingStrokes, stroke] }
+          : page,
+      ),
+    }))
+  }
+
+  const eraseDrawingAtPoint = (pageNumber: number, point: { x: number; y: number }) => {
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((page) => {
+        if (page.pageNumber !== pageNumber) {
+          return page
+        }
+        const threshold = Math.max(eraserWidth * DRAWING_ERASER_HIT_SCALE, 0.9)
+        return {
+          ...page,
+          drawingStrokes: page.drawingStrokes.filter(
+            (stroke) => !stroke.points.some((strokePoint) => getPointDistance(strokePoint, point) <= threshold),
+          ),
+        }
+      }),
+    }))
+  }
+
+  const eraseDrawingStrokes = (strokeIds: string[]) => {
+    if (!strokeIds.length) {
+      return
+    }
+    const targetIds = new Set(strokeIds)
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((page) => ({
+        ...page,
+        drawingStrokes: page.drawingStrokes.filter((stroke) => !targetIds.has(stroke.id)),
+      })),
+    }))
+  }
+
+  const undoDrawing = () => {
+    const pageNumber = project.selectedPageNumber || project.currentPageNumber
+    const page = project.pages.find((item) => item.pageNumber === pageNumber)
+    const stroke = page?.drawingStrokes.at(-1)
+    if (!stroke) {
+      return
+    }
+    setDrawingRedoStack((currentStack) => [stroke, ...currentStack])
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((item) =>
+        item.pageNumber === pageNumber
+          ? { ...item, drawingStrokes: item.drawingStrokes.slice(0, -1) }
+          : item,
+      ),
+    }))
+  }
+
+  const redoDrawing = () => {
+    const stroke = drawingRedoStack[0]
+    if (!stroke) {
+      return
+    }
+    setDrawingRedoStack((currentStack) => currentStack.slice(1))
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((page) =>
+        page.pageNumber === stroke.pageNumber
+          ? { ...page, drawingStrokes: [...page.drawingStrokes, stroke] }
+          : page,
+      ),
+    }))
+  }
+
+  const clearCurrentPageDrawing = () => {
+    const pageNumber = project.selectedPageNumber || project.currentPageNumber
+    if (!window.confirm('このページの描画をすべて削除します。よろしいですか？')) {
+      return
+    }
+    setDrawingRedoStack([])
+    setProject((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((page) =>
+        page.pageNumber === pageNumber ? { ...page, drawingStrokes: [] } : page,
+      ),
+    }))
   }
 
   const toggleAutoNumberPanels = () => {
@@ -1244,12 +1385,42 @@ export function AppShell() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.key === 'Delete' || event.key === 'Backspace') && project.selectedPanelId) {
-        const target = event.target as HTMLElement | null
-        if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
-          return
-        }
+      const target = event.target as HTMLElement | null
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
+        return
+      }
 
+      if (event.key.toLowerCase() === 'p') {
+        event.preventDefault()
+        setSelectedDrawingTool('pen')
+        setDrawingMode((currentMode) => (selectedDrawingTool === 'pen' ? !currentMode : true))
+        return
+      }
+      if (event.key.toLowerCase() === 'e') {
+        event.preventDefault()
+        selectDrawingTool('eraser')
+        return
+      }
+      if (event.key === 'Escape') {
+        setDrawingMode(false)
+        return
+      }
+      if (event.ctrlKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) {
+          redoDrawing()
+        } else {
+          undoDrawing()
+        }
+        return
+      }
+      if (event.ctrlKey && event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        redoDrawing()
+        return
+      }
+
+      if ((event.key === 'Delete' || event.key === 'Backspace') && project.selectedPanelId) {
         event.preventDefault()
         deleteComicPanel(project.selectedPanelId)
       }
@@ -1257,7 +1428,7 @@ export function AppShell() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [project.selectedPanelId])
+  }, [project.selectedPanelId, selectedDrawingTool, drawingRedoStack, project])
 
   const downloadJson = (blob: Blob, fileName: string) => {
     const url = window.URL.createObjectURL(blob)
@@ -1431,6 +1602,25 @@ export function AppShell() {
         onUndoProject={undoProject}
         onResizePane={resizePane}
         canvasZoom={canvasZoom}
+        drawingControls={{
+          canRedo: drawingRedoStack.length > 0,
+          drawingMode,
+          eraserWidth,
+          onAddStroke: addDrawingStroke,
+          onChangeEraserWidth: (width) => setEraserWidth(clampNumber(width, 4, 48)),
+          onChangePenWidth: (width) => setPenWidth(clampNumber(width, 1, 24)),
+          onClear: clearCurrentPageDrawing,
+          onEraseAtPoint: eraseDrawingAtPoint,
+          onEraseStrokes: eraseDrawingStrokes,
+          onRedo: redoDrawing,
+          onSelectColor: selectDrawingColor,
+          onSelectTool: selectDrawingTool,
+          onToggleDrawingMode: () => setDrawingMode((currentMode) => !currentMode),
+          onUndo: undoDrawing,
+          penColor,
+          penWidth,
+          selectedTool: selectedDrawingTool,
+        }}
         paneWidths={paneWidths}
         project={project}
         projectList={appState.projects}
@@ -1494,6 +1684,13 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             '＋ボタンで新しい作品を追加できます。',
             '作品名の入力欄から、作成済みの作品を選択できます。',
             '「この作品を削除する」で現在の作品を削除できます。',
+            '複数の作品をブラウザ内に保持し、プルダウンで切り替えできます。',
+          ]} />
+          <HelpSection title="表示と移動" items={[
+            '100%は原稿ページの基準サイズです。',
+            'フィットは、現在のページまたは見開き全体が中央ペインに収まる倍率にします。',
+            '拡大時は中央ペイン内をスクロールして表示位置を調整できます。',
+            'Ctrl+ドラッグ、またはSpace+ドラッグで、手のひらツールのように表示位置を動かせます。',
           ]} />
           <HelpSection title="ページ" items={[
             '見開き一覧をクリックすると、そのページへ移動できます。',
@@ -1519,6 +1716,18 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             '左ペインの「登場人物」から人物を追加できます。',
             '登場人物チップをコマやコマ内容へドラッグすると、人物を紐付けできます。',
             'チップの×で取り外しできます。',
+            'コマ内のタグは小さく表示され、本文の邪魔になりにくくなっています。',
+          ]} />
+          <HelpSection title="描画" items={[
+            '左ペインの「描画」から描画モードをON/OFFできます。',
+            '中央上部のペンボタンでも描画モードを切り替えできます。',
+            '描画モードONの時、ページ上にマウス・ペンタブ・タッチで線を描けます。',
+            '見開き表示中は、左右ページをまたいで線を引けます。',
+            '色は黒・赤・青から選べます。',
+            'ペンサイズと消しゴムサイズは別々に変更できます。',
+            '消しゴムで描画線を消せます。',
+            'Undo / Redoで描画を戻す・やり直すことができます。',
+            '全消しで現在ページまたは現在見開きの描画を削除できます。',
           ]} />
           <HelpSection title="セリフ・吹き出し" items={[
             'コマ内容内の「セリフ」欄で、セリフ行を追加できます。',
@@ -1527,6 +1736,13 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             '吹き出し形状ボタンで、セリフ / モノローグを切り替えできます。',
             'セリフ方向ボタンで、横書き / 縦書きを切り替えできます。',
             '吹き出しや吹き出し内テキストボックスは、移動・サイズ変更できます。',
+          ]} />
+          <HelpSection title="コマと吹き出しのテキストボックス" items={[
+            'コマ内本文や吹き出し内セリフには、調整用のテキストボックスがあります。',
+            'テキストをクリックすると文章を直接編集できます。',
+            'テキストボックスの左上の角をドラッグすると、テキストボックスを移動できます。',
+            'テキストボックスの右下の角をドラッグすると、テキストボックスの大きさを変更できます。',
+            'コマや吹き出し本体を動かしたい場合は、テキストボックス以外の枠や背景部分をドラッグしてください。',
           ]} />
           <HelpSection title="保存" items={[
             '作業内容はブラウザ内に自動保存されます。',
@@ -1580,6 +1796,19 @@ function getPointBounds(points: PanelPoint[]) {
     width: Math.max(width, 8),
     height: Math.max(height, 6),
   }
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) {
+    return min
+  }
+  return Math.min(Math.max(Math.round(value), min), max)
+}
+
+function getPointDistance(firstPoint: { x: number; y: number }, secondPoint: { x: number; y: number }) {
+  const xDelta = firstPoint.x - secondPoint.x
+  const yDelta = firstPoint.y - secondPoint.y
+  return Math.sqrt(xDelta * xDelta + yDelta * yDelta)
 }
 
 function applyAutoNumbering(project: Project): Project {

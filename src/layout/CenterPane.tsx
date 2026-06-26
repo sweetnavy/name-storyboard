@@ -1,5 +1,5 @@
 import { SpreadCanvas } from '../features/canvas/SpreadCanvas'
-import type { PanelPoint, Project } from '../types/storyboard'
+import type { DrawingStroke, DrawingTool, PanelPoint, Project } from '../types/storyboard'
 
 type CenterPaneProps = {
   project: Project
@@ -64,6 +64,20 @@ type CenterPaneProps = {
   ) => void
   onToggleBubbleTextDirection: () => void
   onUpdatePageTextFontSize: (fontSize: number) => void
+  drawingControls: {
+    drawingMode: boolean
+    selectedTool: DrawingTool
+    penColor: string
+    penWidth: number
+    eraserWidth: number
+    canRedo: boolean
+    onToggleDrawingMode: () => void
+    onSelectTool: (tool: DrawingTool) => void
+    onClear: () => void
+    onAddStroke: (pageNumber: number, stroke: DrawingStroke) => void
+    onEraseAtPoint: (pageNumber: number, point: { x: number; y: number }) => void
+    onEraseStrokes: (strokeIds: string[]) => void
+  }
   zoomControls: {
     resetZoom: () => void
     setZoom: (zoom: number) => void
@@ -97,6 +111,7 @@ export function CenterPane({
   onUpdatePageTextFontSize,
   onUndoProject,
   project,
+  drawingControls,
   zoomControls,
 }: CenterPaneProps) {
   return (
@@ -125,6 +140,7 @@ export function CenterPane({
         onUpdatePageTextFontSize={onUpdatePageTextFontSize}
         onUndoProject={onUndoProject}
         project={project}
+        drawingControls={drawingControls}
         zoomControls={zoomControls}
       />
     </section>

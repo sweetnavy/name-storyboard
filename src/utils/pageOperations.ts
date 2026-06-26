@@ -6,6 +6,7 @@ const createBlankPage = (pageNumber: number): Page => ({
   isCover: false,
   panels: [],
   bubbles: [],
+  drawingStrokes: [],
 })
 
 export function renumberPages(pages: Page[], coverPage: boolean): Page[] {
@@ -20,6 +21,11 @@ export function renumberPages(pages: Page[], coverPage: boolean): Page[] {
     bubbles: (page.bubbles ?? []).map((bubble) => ({
       ...bubble,
       pageNumber: index + 1,
+    })),
+    drawingStrokes: (page.drawingStrokes ?? []).map((stroke) => ({
+      ...stroke,
+      pageNumber: index + 1,
+      pageNumbers: stroke.pageNumbers?.map((pageNumber) => pageNumber - page.pageNumber + index + 1),
     })),
   }))
 }

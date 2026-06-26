@@ -1,12 +1,11 @@
 import { CharacterBlock } from '../features/characters/CharacterBlock'
+import { DrawingBlock } from '../features/drawing/DrawingBlock'
 import { ProjectInfoBlock } from '../features/project/ProjectInfoBlock'
-import { PageControlBlock } from '../features/tools/PageControlBlock'
-import type { Project, Spread } from '../types/storyboard'
+import type { DrawingTool, Project } from '../types/storyboard'
 
 type LeftPaneProps = {
   project: Project
   projects: Project[]
-  currentSpread: Spread
   onInsertPages: (input: string) => void
   onDeletePages: (input: string) => void
   onUpdateProjectTitle: (title: string) => void
@@ -20,10 +19,26 @@ type LeftPaneProps = {
   onSelectCharacter: (characterId: string) => void
   onUpdateCharacterColor: (characterId: string, color: string) => void
   onDeleteCharacter: (characterId: string) => void
+  drawingControls: {
+    drawingMode: boolean
+    selectedTool: DrawingTool
+    penColor: string
+    penWidth: number
+    eraserWidth: number
+    canRedo: boolean
+    onToggleDrawingMode: () => void
+    onSelectTool: (tool: DrawingTool) => void
+    onSelectColor: (color: string) => void
+    onChangePenWidth: (width: number) => void
+    onChangeEraserWidth: (width: number) => void
+    onUndo: () => void
+    onRedo: () => void
+    onClear: () => void
+  }
 }
 
 export function LeftPane({
-  currentSpread,
+  drawingControls,
   onAddCharacter,
   onDeleteCharacter,
   onDeletePages,
@@ -46,18 +61,15 @@ export function LeftPane({
         onToggleCoverPage={onToggleCoverPage}
         onAddProject={onAddProject}
         onDeleteCurrentProject={onDeleteCurrentProject}
+        currentPageNumber={project.selectedPageNumber}
+        onDeletePages={onDeletePages}
+        onInsertPages={onInsertPages}
         onNormalizeTitle={onNormalizeProjectTitle}
         onSelectProject={onSelectProject}
         onUpdateBinding={onUpdateBinding}
         onUpdateTitle={onUpdateProjectTitle}
         project={project}
         projects={projects}
-      />
-      <PageControlBlock
-        currentPageNumber={project.selectedPageNumber}
-        currentSpread={currentSpread}
-        onDeletePages={onDeletePages}
-        onInsertPages={onInsertPages}
       />
       <CharacterBlock
         characters={project.characters}
@@ -67,6 +79,7 @@ export function LeftPane({
         onUpdateCharacterColor={onUpdateCharacterColor}
         selectedCharacterId={project.selectedCharacterId}
       />
+      <DrawingBlock {...drawingControls} />
     </aside>
   )
 }

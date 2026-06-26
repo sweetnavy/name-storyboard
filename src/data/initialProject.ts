@@ -1,20 +1,19 @@
 import type { Project } from '../types/storyboard'
 
 export const CHARACTER_COLOR_PRESETS = [
-  '#D8B72A',
-  '#9A611F',
-  '#F3A2A0',
-  '#C98598',
-  '#E4007F',
-  '#E94738',
-  '#B46AC6',
-  '#7893E6',
-  '#536A7F',
-  '#0078D7',
-  '#73D8CF',
-  '#6E9E43',
-  '#00846E',
-  '#8FB5A8',
+  '#B9C0C9',
+  '#C8D3E6',
+  '#F2D6D8',
+  '#EFE7DE',
+  '#F18F8F',
+  '#F4B49F',
+  '#F3C98B',
+  '#C8D8CD',
+  '#B8DDE2',
+  '#A8D8DC',
+  '#D5E7DD',
+  '#EFE6D8',
+  '#C8CBE0',
 ]
 
 const createPage = (pageNumber: number, isCover = false) => ({
@@ -23,6 +22,7 @@ const createPage = (pageNumber: number, isCover = false) => ({
   isCover,
   panels: [],
   bubbles: [],
+  drawingStrokes: [],
 })
 
 export function createInitialProject(): Project {

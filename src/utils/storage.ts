@@ -159,6 +159,21 @@ export function normalizeProject(project: Project): Project {
         width: bubble.width ?? 24,
         height: bubble.height ?? 12,
       })),
+      drawingStrokes: (page.drawingStrokes ?? []).map((stroke) => ({
+        ...stroke,
+        pageNumber: stroke.pageNumber ?? page.pageNumber,
+        pageNumbers: Array.isArray(stroke.pageNumbers)
+          ? stroke.pageNumbers.filter((pageNumber) => Number.isFinite(pageNumber))
+          : undefined,
+        coordinateScope: stroke.coordinateScope === 'spread' ? 'spread' : 'page',
+        color: stroke.color ?? '#202124',
+        width: typeof stroke.width === 'number' ? Math.min(Math.max(stroke.width, 1), 48) : 4,
+        points: (stroke.points ?? []).map((point) => ({
+          x: Math.min(Math.max(point.x, 0), 100),
+          y: Math.min(Math.max(point.y, 0), 100),
+          pressure: typeof point.pressure === 'number' ? point.pressure : undefined,
+        })),
+      })),
     })),
     project.coverPage,
   )

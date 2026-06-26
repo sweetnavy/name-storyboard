@@ -41,6 +41,24 @@ export type TextBox = {
   height: number
 }
 
+export type DrawingTool = 'pen' | 'eraser'
+
+export type DrawingPoint = {
+  x: number
+  y: number
+  pressure?: number
+}
+
+export type DrawingStroke = {
+  id: string
+  pageNumber: number
+  pageNumbers?: number[]
+  coordinateScope?: 'page' | 'spread'
+  color: string
+  width: number
+  points: DrawingPoint[]
+}
+
 export type SpeechBubbleShape = 'ellipse' | 'rect'
 
 export type SpeechBubble = {
@@ -80,6 +98,7 @@ export type Page = {
   isCover: boolean
   panels: ComicPanel[]
   bubbles: SpeechBubble[]
+  drawingStrokes: DrawingStroke[]
 }
 
 export type Project = {

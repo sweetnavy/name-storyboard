@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Project } from '../../types/storyboard'
 
 type ProjectInfoBlockProps = {
@@ -9,6 +9,9 @@ type ProjectInfoBlockProps = {
   onAddProject: () => void
   onSelectProject: (projectId: string) => void
   onDeleteCurrentProject: () => void
+  currentPageNumber: number
+  onInsertPages: (input: string) => void
+  onDeletePages: (input: string) => void
   onToggleCoverPage: () => void
   onUpdateBinding: (binding: Project['binding']) => void
 }
@@ -16,6 +19,9 @@ type ProjectInfoBlockProps = {
 export function ProjectInfoBlock({
   onAddProject,
   onDeleteCurrentProject,
+  currentPageNumber,
+  onInsertPages,
+  onDeletePages,
   onNormalizeTitle,
   onSelectProject,
   onToggleCoverPage,
@@ -25,6 +31,11 @@ export function ProjectInfoBlock({
   projects,
 }: ProjectInfoBlockProps) {
   const [isProjectListOpen, setIsProjectListOpen] = useState(false)
+  const [pageNumberInput, setPageNumberInput] = useState(String(currentPageNumber))
+
+  useEffect(() => {
+    setPageNumberInput(String(currentPageNumber))
+  }, [currentPageNumber])
 
   return (
     <section className="section-block">
@@ -104,6 +115,24 @@ export function ProjectInfoBlock({
           >
             左綴じ
           </button>
+        </div>
+        <div className="page-action-compact">
+          <span className="text-label">ページ操作</span>
+          <div className="page-action-row">
+            <input
+              className="number-field"
+              inputMode="numeric"
+              onChange={(event) => setPageNumberInput(event.target.value)}
+              placeholder="p.No"
+              value={pageNumberInput}
+            />
+            <button className="ghost-button" type="button" onClick={() => onInsertPages(pageNumberInput)}>
+              挿入
+            </button>
+            <button className="danger-button" type="button" onClick={() => onDeletePages(pageNumberInput)}>
+              削除
+            </button>
+          </div>
         </div>
       </div>
     </section>

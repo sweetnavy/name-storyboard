@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CHARACTER_COLOR_PRESETS } from '../../data/initialProject'
 import type { Character } from '../../types/storyboard'
+import { getCharacterChipStyle } from '../../utils/color'
 
 type CharacterBlockProps = {
   characters: Character[]
@@ -45,7 +46,7 @@ export function CharacterBlock({
                 event.dataTransfer.effectAllowed = 'copy'
               }}
               onClick={() => onSelectCharacter(character.id)}
-              style={{ backgroundColor: character.color }}
+              style={getCharacterChipStyle(character.color)}
               type="button"
             >
               {character.name}

@@ -2,7 +2,7 @@ import { CenterPane } from './CenterPane'
 import { LeftPane } from './LeftPane'
 import { RightPane } from './RightPane'
 import { SubPane } from './SubPane'
-import type { PanelPoint, Project, Spread } from '../types/storyboard'
+import type { DrawingStroke, DrawingTool, PanelPoint, Project, Spread } from '../types/storyboard'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 
 type PaneLayoutProps = {
@@ -18,6 +18,25 @@ type PaneLayoutProps = {
   }
   paneWidths: { leftPaneWidth: number; rightPaneWidth: number }
   projectList: Project[]
+  drawingControls: {
+    drawingMode: boolean
+    selectedTool: DrawingTool
+    penColor: string
+    penWidth: number
+    eraserWidth: number
+    canRedo: boolean
+    onToggleDrawingMode: () => void
+    onSelectTool: (tool: DrawingTool) => void
+    onSelectColor: (color: string) => void
+    onChangePenWidth: (width: number) => void
+    onChangeEraserWidth: (width: number) => void
+    onUndo: () => void
+    onRedo: () => void
+    onClear: () => void
+    onAddStroke: (pageNumber: number, stroke: DrawingStroke) => void
+    onEraseAtPoint: (pageNumber: number, point: { x: number; y: number }) => void
+    onEraseStrokes: (strokeIds: string[]) => void
+  }
   spreads: Spread[]
   currentSpread: Spread
   onGoToSpread: (pageNumber: number) => void
@@ -122,6 +141,7 @@ export function PaneLayout({
   canRedo,
   canUndo,
   currentSpread,
+  drawingControls,
   onAddBeat,
   onAddCharacter,
   onAddCharacterToBeat,
@@ -204,7 +224,7 @@ export function PaneLayout({
       style={paneStyle}
     >
       <LeftPane
-        currentSpread={currentSpread}
+        drawingControls={drawingControls}
         onAddCharacter={onAddCharacter}
         onDeleteCharacter={onDeleteCharacter}
         onDeletePages={onDeletePages}
@@ -259,6 +279,7 @@ export function PaneLayout({
         onUpdatePageTextFontSize={onUpdatePageTextFontSize}
         project={project}
         zoomControls={canvasZoom}
+        drawingControls={drawingControls}
       />
       <button
         aria-label="右ペイン幅を変更"
